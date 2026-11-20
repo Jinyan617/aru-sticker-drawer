@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>专属斗图盒（Aru 房间卡片模板）</title>
+<style>
+  :root {
+    --bg: #fff8f9;
+    --card: #ffffff;
+    --ink: #4a353b;
+    --muted: #9e8289;
+    --pink: #ff7a9e;
+    --pink-soft: #ffeef3;
+    --border: #f7dce3;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    padding: 12px 12px 28px;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .title-wrap { display: flex; align-items: center; gap: 6px; }
+  .title { font-size: 16px; font-weight: 700; }
+  .count-badge {
+    font-size: 11px;
+    background: var(--pink-soft);
+    color: var(--pink);
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+  .head-ops { display: flex; gap: 6px; }
+  .chip-btn {
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--ink);
+    font-size: 11.5px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .chip-btn.primary {
+    background: var(--pink);
+    border-color: var(--pink);
+    color: #fff;
+    font-weight: 600;
+  }
+  .tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--muted);
+    font-size: 12px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .tab.active {
+    background: var(--pink-soft);
+    border-color: var(--pink);
+    color: var(--pink);
+    font-weight: 600;
+  }
+  .add-panel {
+    display: none;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 10px;
+    margin-bottom: 10px;
+    gap: 7px;
+    flex-direction: column;
+  }
+  .add-panel.open { display: flex; }
+  .add-row { display: flex; gap: 6px; }
+  input, select {
+    width: 100%;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--ink);
+    border-radius: 9px;
+    padding: 7px 9px;
+    font-size: 12.5px;
+    outline: none;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .sticker-card {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+  .sticker-card:active { transform: scale(0.95); }
+  .del-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 19px;
+    height: 19px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(74, 53, 59, 0.55);
+    color: #fff;
+    font-size: 11px;
+    line-height: 19px;
+    text-align: center;
+    padding: 0;
+    cursor: pointer;
+    z-index: 2;
+  }
+  .sticker-img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 8px;
+    background: var(--pink-soft);
+  }
+  .sticker-name {
+    margin-top: 5px;
+    font-size: 11px;
+    color: var(--ink);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+  }
+  .tip {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(74, 53, 59, 0.92);
+    color: #fff;
+    font-size: 12px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s ease;
+    z-index: 99;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="title-wrap">
+      <span class="title">🐰 专属斗图盒</span>
+      <span class="count-badge" id="totalCount">0</span>
+    </div>
+    <div class="head-ops">
+      <button class="chip-btn" id="btnRestore">恢复默认</button>
+      <button class="chip-btn primary" id="btnToggleAdd">＋ 添新图</button>
+    </div>
+  </div>
+
+  <div class="tip">点一下表情包自动复制发图代码，回输入框粘贴就能变成动图；不喜欢的点右上角 ✕ 删掉就好～</div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-cat="all">全部</button>
+    <button class="tab" data-cat="daily">💞 日常动图</button>
+    <button class="tab" data-cat="cute">🐰 撒娇贴贴</button>
+    <button class="tab" data-cat="meme">🌀 抽象搞笑</button>
+  </div>
+
+  <div class="add-panel" id="addPanel">
+    <div class="add-row">
+      <input type="text" id="inName" placeholder="表情名字（如：贴贴）" />
+      <select id="inCat" style="width:110px;">
+        <option value="daily">💞 日常动图</option>
+        <option value="cute">🐰 撒娇贴贴</option>
+        <option value="meme">🌀 抽象搞笑</option>
+      </select>
+    </div>
+    <input type="text" id="inUrl" placeholder="图片直链 https://..." />
+    <button class="chip-btn primary" id="btnSaveNew" style="padding:8px;">放进斗图盒</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="toast" id="toast">已复制</div>
+
+<script id="aru-miniapp" type="application/json">
+{
+  "actions": [
+    {
+      "id": "addSticker",
+      "description": "向专属斗图盒添加一张新表情包",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "表情包名称" },
+          "url": { "type": "string", "description": "图片 HTTPS 直链" },
+          "cat": { "type": "string", "description": "分类：daily(日常动图)/cute(撒娇贴贴)/meme(抽象搞笑)" }
+        },
+        "required": ["name", "url"]
+      },
+      "handler": "const a = PolarisTool.args || {}; const cur = PolarisRoom.getState() || {}; const list = Array.isArray(cur.stickers) ? cur.stickers.slice() : []; const id = 'stk_' + Date.now(); if (!list.some(s => s.url === a.url)) { list.unshift({ id, name: a.name, url: a.url, cat: a.cat || 'daily' }); } PolarisRoom.patchState({ stickers: list }); return { ok: true, total: list.length, added: a.name };"
+    },
+    {
+      "id": "listStickers",
+      "description": "查看斗图盒里当前保留的所有表情包",
+      "parameters": { "type": "object", "properties": {} },
+      "handler": "const cur = PolarisRoom.getState() || {}; return { stickers: cur.stickers || [] };"
+    }
+  ]
+}
+</script>
+
+<script>
+// 请将 BASE 替换为你自己的图床前缀或 VPS 域名，并在 DEFAULT_STICKERS 中填入你的表情包列表
+const BASE = "https://your-domain.example.com/stickers/";
+const DEFAULT_STICKERS = [
+  { id: "d1", name: "贴贴", cat: "daily", url: BASE + "d1.gif" },
+  { id: "d2", name: "撒娇", cat: "cute", url: BASE + "d2.gif" },
+  { id: "d3", name: "摸鱼", cat: "meme", url: BASE + "d3.gif" }
+];
+
+let stickers = [];
+let activeCat = "all";
+let toastTimer = null;
+
+function showToast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
+}
+
+function saveState() {
+  if (window.PolarisRoom) {
+    window.PolarisRoom.patchState({ stickers });
+    window.PolarisRoom.save();
+  }
+}
+
+async function copySticker(s) {
+  const md = `![${s.name}](${s.url})`;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(md);
+      showToast(`已复制「${s.name}」，去输入框粘贴发送～`);
+      return;
+    }
+  } catch {}
+  const ta = document.createElement("textarea");
+  ta.value = md;
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand("copy");
+  document.body.removeChild(ta);
+  showToast(`已复制「${s.name}」，去输入框粘贴发送～`);
+}
+
+function render() {
+  document.getElementById("totalCount").textContent = stickers.length;
+  document.querySelectorAll("#tabs .tab").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.cat === activeCat);
+  });
+  const list = activeCat === "all" ? stickers : stickers.filter(s => s.cat === activeCat);
+  const grid = document.getElementById("grid");
+  if (list.length === 0) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;font-size:12px;color:#9e8289;padding:24px 0;">这个分类里空空的～点右上角「＋ 添新图」或「恢复默认」</div>`;
+    return;
+  }
+  grid.innerHTML = "";
+  list.forEach(s => {
+    const card = document.createElement("div");
+    card.className = "sticker-card";
+    card.onclick = () => copySticker(s);
+
+    const del = document.createElement("button");
+    del.className = "del-btn";
+    del.textContent = "✕";
+    del.title = "删掉这张";
+    del.onclick = (e) => {
+      e.stopPropagation();
+      stickers = stickers.filter(x => x.id !== s.id);
+      saveState();
+      render();
+      showToast(`已移走「${s.name}」`);
+    };
+
+    const img = document.createElement("img");
+    img.className = "sticker-img";
+    img.src = s.url;
+    img.alt = s.name;
+    img.loading = "lazy";
+
+    const name = document.createElement("div");
+    name.className = "sticker-name";
+    name.textContent = s.name;
+
+    card.appendChild(del);
+    card.appendChild(img);
+    card.appendChild(name);
+    grid.appendChild(card);
+  });
+}
+
+document.querySelectorAll("#tabs .tab").forEach(btn => {
+  btn.onclick = () => {
+    activeCat = btn.dataset.cat;
+    render();
+  };
+});
+
+document.getElementById("btnToggleAdd").onclick = () => {
+  document.getElementById("addPanel").classList.toggle("open");
+};
+
+document.getElementById("btnSaveNew").onclick = () => {
+  const name = document.getElementById("inName").value.trim() || "新表情";
+  const url = document.getElementById("inUrl").value.trim();
+  const cat = document.getElementById("inCat").value;
+  if (!url) {
+    showToast("先贴上图片直链哦");
+    return;
+  }
+  stickers.unshift({ id: "u_" + Date.now(), name, url, cat });
+  saveState();
+  render();
+  document.getElementById("inName").value = "";
+  document.getElementById("inUrl").value = "";
+  document.getElementById("addPanel").classList.remove("open");
+  showToast(`已收进「${name}」`);
+};
+
+document.getElementById("btnRestore").onclick = () => {
+  stickers = DEFAULT_STICKERS.slice();
+  saveState();
+  render();
+  showToast(`已恢复全部 ${DEFAULT_STICKERS.length} 张默认表情包`);
+};
+
+async function init() {
+  if (window.PolarisRoom) {
+    const saved = await window.PolarisRoom.whenReady();
+    if (saved && Array.isArray(saved.stickers) && saved.stickers.length > 0) {
+      stickers = saved.stickers;
+    } else {
+      stickers = DEFAULT_STICKERS.slice();
+      saveState();
+    }
+    window.PolarisRoom.subscribe(next => {
+      if (next && Array.isArray(next.stickers)) {
+        stickers = next.stickers;
+        render();
+      }
+    });
+  } else {
+    stickers = DEFAULT_STICKERS.slice();
+  }
+  render();
+}
+init();
+</script>
+</body>
+</html>
